@@ -16,8 +16,7 @@ int checkSendcount=0;
 int checkSendTime=10000;
 int checkSendTimeNow;
 
-#define TX2_pin  17
-#define RX2_pin  16
+
 
 //struct of veribales that are sent to plant
 typedef struct sentDataStruct{ 
@@ -62,7 +61,7 @@ void swithTaskReturnMaster( int taskReceive);
 
 void setup() {
     Serial.begin(115200);
-   Serial2.begin(115200/*, SERIAL_8N1, RX2_pin, TX2_pin*/);   
+   Serial2.begin(5000000);   
     
    delay(1000);
       WiFi.mode(WIFI_STA);
@@ -199,14 +198,10 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
       //checkUpdateProgrem();
     break;
 }
- // if(Serial2.available()) {
-     Serial.println("i am here" );  
-     serializeJson(doc1,Serial2);
-//  } 
- // else {
-  //  delay(900);
-   // serializeJson(doc1,Serial2);
- // }
+
+    delay(1000);
+    Serial.println("no fuck i am here" );  
+    serializeJson(doc1,Serial2);
 }
 
 void sendTask(){
