@@ -13,10 +13,14 @@ uint8_t broadcastAddress[] = {0xFC, 0xF5, 0xC4, 0x31, 0xA4, 0x7C};//FC:F5:C4:31:
 //bool checkMessageReceive=false;
 
 int checkSendcount=0;
-int checkSendTime=10000;
+int checkSendTime=15000;
 int checkSendTimeNow;
+int checkSuccess=0;
 
+int withTimeForSuccess=200;
+int withTimeForSuccessNow=0;
 
+bool checkRecive=false;
 
 //struct of veribales that are sent to plant
 typedef struct sentDataStruct{ 
@@ -60,7 +64,7 @@ void swithTaskReturnMaster( int taskReceive);
 
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(250000);
    Serial2.begin(5000000);   
     
    delay(1000);
@@ -95,6 +99,14 @@ void loop() {
     }
            swithSendTaskPlant(doc);  
   }
+
+    if ((checkSuccess==1)&&(millis()-checkSendTimeNow<checkSendTime)&&(millis()-withTimeForSuccessNow>withTimeForSuccess)){
+    Serial.println("time left:" +(String)(millis()-checkSendTimeNow));//delete before prduction  
+    Serial.println("Error sending the data, trying agin");//delete before prduction
+    withTimeForSuccessNow=millis();
+    sendTask();
+  }
+
 }
 
 void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter send to the plant
@@ -131,24 +143,73 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
 //      checkUpdateProgrem();
     break;
     }
-//    checkSendTimeNow=millis();
-    sendTask();  
+    checkSendTimeNow=millis();
+    withTimeForSuccessNow=millis();
+    checkSuccess=1;
+    sendTask();
+  
+      
 }
 
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status){
   char macStr[18];
-  Serial.print("Packet to: ");
+  //Serial.print("Packet to: ");
   // Copies the sender mac address to a string
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   Serial.print(macStr);
-  Serial.print(" send status:\t");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+ // Serial.println(" send status:\t");
+  //Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  switch (status){
+  case ESP_NOW_SEND_SUCCESS:
+  // if(millis()-checkSendTimeNow<checkSendTime){
+      Serial.println(" send SUCCESS");
+     // int timeSUCCESS=millis()-checkSendTimeNow;
+      //Serial.println("time :"+ (String)timeSUCCESS);
+    checkSuccess=0;
+   //}
+   break;
+  case ESP_NOW_SEND_FAIL:
+    if (millis()-checkSendTimeNow>=checkSendTime){
+     Serial.println("didn't secced");
+     checkSuccess=0;
+   } 
+   break;
+   
+   default:
+      break;
+  }
+}
+
+void sendTask(){
+  EspNowRegusterPeer();  
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sentData, sizeof(sentData));
+  if (result == ESP_OK)
+  {
+    Serial.println("Sent with success");//delete before prduction
+  }
+  else
+  {
+    Serial.println("Error sending the data");//delete before prduction
+  } 
+}
+
+void EspNowRegusterPeer(){
+  esp_now_peer_info_t peerInfo= {};
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+  // register first peer  
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  if (!esp_now_is_peer_exist(broadcastAddress))
+  {
+    esp_now_add_peer(&peerInfo);
+  }
 }
 
 // callback function that will be executed when data is received
-void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) {
+void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) { 
+  checkSuccess=0;
   char macStr[18];
   Serial.print("Packet received from: ");
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -172,7 +233,6 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
       doc1["plantIdNumber"]=receiveData.plantIdNumber;
       Serial.println(receiveData.massgeSuccess); 
       Serial.println(receiveData.plantIdNumber); 
-      delay(1000);
     break;
     case 2://reciving sensor data   
       break;
@@ -198,38 +258,7 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
       //checkUpdateProgrem();
     break;
 }
-
-    delay(1000);
     Serial.println("no fuck i am here" );  
     serializeJson(doc1,Serial2);
-}
-
-void sendTask(){
-  EspNowRegusterPeer();
-  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sentData, sizeof(sentData));
-  if (result == ESP_OK)
-  {
-    Serial.println("Sent with success");//delete before prduction
-  }
-  else
-  {
-    if(millis()-checkSendTimeNow<=checkSendTime){
-      Serial.println("Error sending the data, trying agin");//delete before prduction
-      sendTask();
-    }
-    else
-        Serial.println("Error sending the data");//delete before prduction
-  } 
-}
-
-void EspNowRegusterPeer(){
-  esp_now_peer_info_t peerInfo= {};
-  peerInfo.channel = 0;  
-  peerInfo.encrypt = false;
-  // register first peer  
-  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-  if (!esp_now_is_peer_exist(broadcastAddress))
-  {
-    esp_now_add_peer(&peerInfo);
-  }
+    checkSuccess=0;
 }
