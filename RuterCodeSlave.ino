@@ -5,12 +5,9 @@
 
 // REPLACE WITH THE RECEIVER'S MAC Address
 String bAddress="24:6F:28:AD:F2:0C";
-uint8_t broadcastAddress[] = {0xFC, 0xF5, 0xC4, 0x31, 0xA4, 0x7C};//FC:F5:C4:31:A4:7C
+//uint8_t broadcastAddress[] = {0xFC, 0xF5, 0xC4, 0x31, 0xA4, 0x7C};//FC:F5:C4:31:A4:7C
 //uint8_t broadcastAddress[] = {0x24, 0x6F, 0x28, 0xB2, 0x0D, 0x34};//24:6F:28:B2:0D:34
-
-//int motorCurrentSub=100;
-//int irrigatePlantOption=1;
-//bool checkMessageReceive=false;
+uint8_t broadcastAddress[6];
 
 int checkSendcount=0;
 int checkSendTime=15000;
@@ -60,6 +57,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
 void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len);
 void sendTask();
 void swithSendTaskPlant(const JsonDocument& local_doc);
+void updateSendMACAddress(String MacAddressSring);
 void swithTaskReturnMaster( int taskReceive);
 
 
@@ -113,12 +111,14 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
   sentData.task=local_doc["task"];  
   Serial.println("task number "+(String)sentData.task);
   switch(sentData.task) {
-    case 1:    
+    case 1:  
+       updateSendMACAddress(local_doc["macAddress"]) ; 
        sentData.motorCurrentSub=local_doc["motorCurrentSub"];
        sentData.plantIdNumber=local_doc["plantIdNumber"].as<String>();
        Serial.println("product numbeer"+(String)sentData.plantIdNumber);
       break;
     case 2:
+        updateSendMACAddress(local_doc["macAddress"]) ; 
         sentData.irrigatePlantOption=local_doc["irrigatePlantOption"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
         sentData.plantIdNumber=local_doc["plantIdNumber"].as<String>();
@@ -127,6 +127,7 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
     case 3:
       break;
     case 4:
+        updateSendMACAddress(local_doc["macAddress"]) ; 
         sentData.autoIrrigateState = local_doc["autoIrrigateState"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
         Serial.println("product numbeer"+sentData.plantIdNumber);
@@ -136,6 +137,7 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
 //      batteryStatus();
      break;
     case 6:
+       updateSendMACAddress(local_doc["macAddress"]) ; 
       sentData.motorState= local_doc["motorState"];
       sentData.motorCurrentSub=local_doc["motorCurrentSub"];
     break;
@@ -151,6 +153,16 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
       
 }
 
+void updateSendMACAddress(String MacAddressSring){
+   char MacAddressChar[17];
+   MacAddressSring.toCharArray(MacAddressChar, 17);
+     char* ptr;
+     broadcastAddress[0] = strtol( strtok(MacAddressChar,":"), &ptr, HEX );
+  for( uint8_t i = 1; i < 6; i++ )
+  {
+    broadcastAddress[i] = strtol( strtok( NULL,":"), &ptr, HEX );
+  }
+}
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status){
   char macStr[18];
