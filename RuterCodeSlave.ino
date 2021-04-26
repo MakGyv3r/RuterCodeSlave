@@ -4,7 +4,7 @@
 #include <HardwareSerial.h>
 
 // REPLACE WITH THE RECEIVER'S MAC Address
-String bAddress="24:6F:28:AD:F2:0C";
+//String bAddress="24:6F:28:AD:F2:0C";
 //uint8_t broadcastAddress[] = {0xFC, 0xF5, 0xC4, 0x31, 0xA4, 0x7C};//FC:F5:C4:31:A4:7C
 //uint8_t broadcastAddress[] = {0x24, 0x6F, 0x28, 0xB2, 0x0D, 0x34};//24:6F:28:B2:0D:34
 uint8_t broadcastAddress[6];
@@ -62,8 +62,8 @@ void swithTaskReturnMaster( int taskReceive);
 
 
 void setup() {
-    Serial.begin(250000);
-   Serial2.begin(5000000);   
+    Serial.begin(115200);
+   Serial2.begin(4500000);   
     
    delay(1000);
       WiFi.mode(WIFI_STA);
@@ -109,19 +109,20 @@ void loop() {
 
 void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter send to the plant
   sentData.task=local_doc["task"];  
+  sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
   Serial.println("task number "+(String)sentData.task);
   switch(sentData.task) {
     case 1:  
        updateSendMACAddress(local_doc["macAddress"]) ; 
        sentData.motorCurrentSub=local_doc["motorCurrentSub"];
-       sentData.plantIdNumber=local_doc["plantIdNumber"].as<String>();
+    //   sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
        Serial.println("product numbeer"+(String)sentData.plantIdNumber);
       break;
     case 2:
         updateSendMACAddress(local_doc["macAddress"]) ; 
         sentData.irrigatePlantOption=local_doc["irrigatePlantOption"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
-        sentData.plantIdNumber=local_doc["plantIdNumber"].as<String>();
+ //       sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
         Serial.println("product numbeer"+(String)sentData.plantIdNumber);
       break;
     case 3:
@@ -154,8 +155,9 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
 }
 
 void updateSendMACAddress(String MacAddressSring){
-   char MacAddressChar[17];
-   MacAddressSring.toCharArray(MacAddressChar, 17);
+  Serial.println("this is my mac address"+MacAddressSring);
+   char MacAddressChar[18];
+   MacAddressSring.toCharArray(MacAddressChar, 18);
      char* ptr;
      broadcastAddress[0] = strtol( strtok(MacAddressChar,":"), &ptr, HEX );
   for( uint8_t i = 1; i < 6; i++ )
@@ -179,7 +181,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status){
       Serial.println(" send SUCCESS");
      // int timeSUCCESS=millis()-checkSendTimeNow;
       //Serial.println("time :"+ (String)timeSUCCESS);
-    checkSuccess=0;
+   // checkSuccess=0;
    //}
    break;
   case ESP_NOW_SEND_FAIL:
