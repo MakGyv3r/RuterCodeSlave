@@ -27,6 +27,7 @@ typedef struct sentDataStruct{
   bool motorState=false;
   bool autoIrrigateState=false;
   int irrigatePlantOption;
+  String UPDATE_URL;
   unsigned short versuionNumber;
   String ssid;
   String pass;
@@ -44,7 +45,9 @@ typedef struct receiveDataStruct{
   bool waterState;
   bool autoIrrigateState;
   bool irrigatePlantWorking;
+  unsigned short VERSION_NUMBER;
   bool massgeSuccess;
+  bool wifiWorked;
 } receiveDataStruct;
 receiveDataStruct receiveData;
 
@@ -110,48 +113,49 @@ void loop() {
 void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter send to the plant
   sentData.task=local_doc["task"];  
   sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
+  updateSendMACAddress(local_doc["macAddress"]) ; 
   Serial.println("task number "+(String)sentData.task);
+  Serial.println("product numbeer"+sentData.plantIdNumber);
   switch(sentData.task) {
+
     case 1:  
-       updateSendMACAddress(local_doc["macAddress"]) ; 
        sentData.motorCurrentSub=local_doc["motorCurrentSub"];
-    //   sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
-       Serial.println("product numbeer"+(String)sentData.plantIdNumber);
       break;
     case 2:
-        updateSendMACAddress(local_doc["macAddress"]) ; 
         sentData.irrigatePlantOption=local_doc["irrigatePlantOption"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
- //       sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
-        Serial.println("product numbeer"+(String)sentData.plantIdNumber);
       break;
     case 3:
       break;
     case 4:
-        updateSendMACAddress(local_doc["macAddress"]) ; 
         sentData.autoIrrigateState = local_doc["autoIrrigateState"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
-        Serial.println("product numbeer"+sentData.plantIdNumber);
-        Serial.println("auto Irrigate State"+(String)sentData.autoIrrigateState);//delete before prduction
       break;
     case 5:
 //      batteryStatus();
      break;
     case 6:
-       updateSendMACAddress(local_doc["macAddress"]) ; 
       sentData.motorState= local_doc["motorState"];
       sentData.motorCurrentSub=local_doc["motorCurrentSub"];
     break;
     case 8:
 //      checkUpdateProgrem();
+      sentData.UPDATE_URL=local_doc["UPDATE_URL"].as<String>();
+      sentData.versuionNumber=local_doc["VERSION_NUMBER"].as<unsigned short>();
+      sentData.ssid=local_doc["ssid"].as<String>();
+      sentData.pass=local_doc["pass"].as<String>();
     break;
+    case 9://checkUpdatePlantProgrem
+
+    break;
+
     }
+    if(sentData.task !=10){
     checkSendTimeNow=millis();
     withTimeForSuccessNow=millis();
     checkSuccess=1;
-    sendTask();
-  
-      
+    sendTask();   
+    }  
 }
 
 void updateSendMACAddress(String MacAddressSring){
@@ -195,7 +199,6 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status){
       break;
   }
 }
-
 void sendTask(){
   EspNowRegusterPeer();  
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sentData, sizeof(sentData));
@@ -208,7 +211,6 @@ void sendTask(){
     Serial.println("Error sending the data");//delete before prduction
   } 
 }
-
 void EspNowRegusterPeer(){
   esp_now_peer_info_t peerInfo= {};
   peerInfo.channel = 0;  
@@ -220,7 +222,6 @@ void EspNowRegusterPeer(){
     esp_now_add_peer(&peerInfo);
   }
 }
-
 // callback function that will be executed when data is received
 void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) { 
   checkSuccess=0;
@@ -240,11 +241,12 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
       StaticJsonDocument<200> doc1;
       doc1["task"]=receiveData.task;
       Serial.println(receiveData.task);
+      Serial.println(receiveData.plantIdNumber);
+      doc1["productCatNumber"]=receiveData.plantIdNumber;
   switch(taskReceive) {
     case 1:
 //      plantInitialization
       doc1["massgeSuccess"]=receiveData.massgeSuccess;
-      doc1["plantIdNumber"]=receiveData.plantIdNumber;
       Serial.println(receiveData.massgeSuccess); 
       Serial.println(receiveData.plantIdNumber); 
     break;
@@ -253,12 +255,10 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
     case 3://reciving sensor data
       doc1["moistureStatus"]=receiveData.moistureStatus;
       doc1["lightStatus"]=receiveData.lightStatus;
-      doc1["plantIdNumber"]=receiveData.plantIdNumber;
       Serial.println("humidity Status:"+ (String)receiveData.moistureStatus );
       Serial.println("humidity Status:"+ (String)receiveData.lightStatus );  
       break;
     case 4://reciving motor status 
-        doc1["plantIdNumber"]=receiveData.plantIdNumber;
         doc1["motorState"]=receiveData.motorState;
         doc1["irrigatePlantWorking"]=receiveData.irrigatePlantWorking;
         doc1["autoIrrigateState"]=receiveData.autoIrrigateState;
@@ -268,11 +268,25 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
         Serial.println("autoIrrigateState state:"+ (String)receiveData.autoIrrigateState); 
         Serial.println("waterState state:"+ (String)receiveData.waterState); 
       break;
-    case 8:
-      //checkUpdateProgrem();
+    case 8://update recive and updateing or not 
+    
+     doc1["massgeSuccess"]=receiveData.massgeSuccess;
+     doc1["VERSION_NUMBER"]=receiveData.VERSION_NUMBER; 
+     doc1["wifiWorked"]=receiveData.wifiWorked;  
     break;
+    case 9://update didn't secseed 
+      //cheack version
+    break;
+     case 10://massage racived
+      Serial.println("massage racived");
+      doc1["massgeSuccess"]=receiveData.massgeSuccess;
+      checkSuccess=0;
+     break;
 }
+    if(receiveData.task !=10){
     Serial.println("no fuck i am here" );  
     serializeJson(doc1,Serial2);
     checkSuccess=0;
+    }
+    
 }
