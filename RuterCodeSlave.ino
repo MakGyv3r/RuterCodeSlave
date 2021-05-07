@@ -1,12 +1,25 @@
-#include <ArduinoJson.h>
+ #include <ArduinoJson.h>
 #include <esp_now.h>
 #include <WiFi.h>
+#include "config_wifi.h"
+#include "EOTAUpdate.h"
 #include <HardwareSerial.h>
 
+  #define EEPROM_SSID 0
+  #define EEPROM_PASS 100
+  #define EEPROM_ID 200
+
+//Config_OTA
+//const char * const   VERSION_STRING = "0.1";
+  const unsigned short VERSION_NUMBER = 1;
+  const char * const   UPDATE_URL     = "http://morning-falls-78321.herokuapp.com/update.txt";
+//  const char * const   UPDATE_URL     = "http://0db0f6a29cd7.ngrok.io/update.txt";
+  EOTAUpdate updater(UPDATE_URL, VERSION_NUMBER);
+
+  //Config_wifi
+  Config_wifi wifi;
+  
 // REPLACE WITH THE RECEIVER'S MAC Address
-//String bAddress="24:6F:28:AD:F2:0C";
-//uint8_t broadcastAddress[] = {0xFC, 0xF5, 0xC4, 0x31, 0xA4, 0x7C};//FC:F5:C4:31:A4:7C
-//uint8_t broadcastAddress[] = {0x24, 0x6F, 0x28, 0xB2, 0x0D, 0x34};//24:6F:28:B2:0D:34
 uint8_t broadcastAddress[6];
 
 int checkSendcount=0;
@@ -145,17 +158,57 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
       sentData.ssid=local_doc["ssid"].as<String>();
       sentData.pass=local_doc["pass"].as<String>();
     break;
-    case 9://checkUpdatePlantProgrem
-
-    break;
-
-    }
-    if(sentData.task !=10){
-    checkSendTimeNow=millis();
-    withTimeForSuccessNow=millis();
-    checkSuccess=1;
-    sendTask();   
-    }  
+    case 11://checkUpdatePlantProgrem
+        if (esp_now_deinit() != ESP_OK) {
+        Serial.println("Error initializing ESP-NOW");
+        return;
+      }
+       wifi.writeStringEEPROM(EEPROM_SSID,wifi.urldecode(local_doc["ssid"].as<String>()));
+       wifi.writeStringEEPROM(EEPROM_PASS,wifi.urldecode(local_doc["pass"].as<String>()));
+        WiFi.mode(WIFI_STA);//WIFI_MODE_STA
+        String ssidD=wifi.urldecode(wifi.readStringEEPROM(EEPROM_SSID));
+        String passD=wifi.urldecode(wifi.readStringEEPROM(EEPROM_PASS));
+        char ssidA[100];
+        char passA[100];
+        ssidD.toCharArray(ssidA, 99);
+        passD.toCharArray(passA, 99);
+        Serial.println("Trying to connect to " + ssidD + " with passwd:" + passD);  
+        WiFi.begin(ssidA, passA); 
+        delay(1000);   
+        int i = 100;
+        while (i-- > 0 && WiFi.status() != WL_CONNECTED)
+        {
+            delay(50);
+            Serial.print(".");//delete before prduction
+        }
+        if (WiFi.status() != WL_CONNECTED)
+        {      
+          Serial.println("Connection failed");//delete before prduction 
+          receiveData.task=11;
+          receiveData.massgeSuccess=false;
+          receiveData.VERSION_NUMBER=VERSION_NUMBER;
+        }
+        else if (WiFi.status() == WL_CONNECTED)
+        {
+          Serial.println("WiFi connected");//delete before prduction
+          Serial.println("Checking for updates. Remember to set the URL!");//delete before prduction
+    //      updater.CheckAndUpdate();
+          delay(30);
+          } 
+            if (esp_now_init() != ESP_OK) {
+        Serial.println("Error initializing ESP-NOW");
+        return;
+      }
+         swithTaskReturnMaster(11);
+      break;
+  
+      }
+      if((sentData.task !=10)&&(sentData.task !=11)){
+      checkSendTimeNow=millis();
+      withTimeForSuccessNow=millis();
+      checkSuccess=1;
+      sendTask();   
+      }  
 }
 
 void updateSendMACAddress(String MacAddressSring){
@@ -220,7 +273,7 @@ void EspNowRegusterPeer(){
   if (!esp_now_is_peer_exist(broadcastAddress))
   {
     esp_now_add_peer(&peerInfo);
-  }
+  } 
 }
 // callback function that will be executed when data is received
 void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) { 
@@ -281,6 +334,13 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
       Serial.println("massage racived");
       doc1["massgeSuccess"]=receiveData.massgeSuccess;
       checkSuccess=0;
+     break;
+     case 11://massage racived
+      Serial.println("massage racived");
+      doc1["task"]=11;
+      doc1["type"]="slave";
+      doc1["VERSION_NUMBER"]=VERSION_NUMBER;
+      doc1["massgeSuccess"]=receiveData.massgeSuccess;
      break;
 }
     if(receiveData.task !=10){
