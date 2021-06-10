@@ -292,14 +292,13 @@ void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) {
 
 void swithTaskReturnMaster( int taskReceive){//task that are send to the Router 
       StaticJsonDocument<200> doc1;
-      doc1["task"]=receiveData.task;
+      doc1["task"]=(String)receiveData.task;
       Serial.println(receiveData.task);
       Serial.println(receiveData.plantIdNumber);
-      doc1["productCatNumber"]=receiveData.plantIdNumber;
+      doc1["productCatNumber"]=(String)receiveData.plantIdNumber;
   switch(taskReceive) {
-    case 1:
-//      plantInitialization
-      doc1["massgeSuccess"]=receiveData.massgeSuccess;
+    case 1://plantInitialization
+      doc1["massgeSuccess"]=(String)receiveData.massgeSuccess;
       Serial.println(receiveData.massgeSuccess); 
       Serial.println(receiveData.plantIdNumber); 
     break;
