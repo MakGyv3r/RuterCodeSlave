@@ -27,7 +27,7 @@ int checkSendTime=15000;
 int checkSendTimeNow;
 int checkSuccess=0;
 
-int withTimeForSuccess=200;
+int withTimeForSuccess=200;//200
 int withTimeForSuccessNow=0;
 
 int timeSinceRecivedMassageFromPlant=0;
@@ -119,7 +119,7 @@ void loop() {
   }
   
     if((millis()-timeSinceRecivedMassageFromPlant>timeSinceRecivedMassageFromPlantChect)&&(checkSuccess==0)&&(reciveMassageFromMaster==true)){
-      //Serial.println("time massage sent:" +(String)(timeSinceRecivedMassageFromPlant));//delete before prduction  
+      Serial.println("time massage sent:" +(String)(millis()-timeSinceRecivedMassageFromPlant));//delete before prduction  
       checkSuccess=1;
     }
     
@@ -247,6 +247,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status){
       Serial.println(" send SUCCESS");
       //delay(1000);
       timeSinceRecivedMassageFromPlant=millis();
+      withTimeForSuccessNow=millis();
    break;
   case ESP_NOW_SEND_FAIL:
     if (millis()-checkSendTimeNow>=checkSendTime){
@@ -271,6 +272,7 @@ void sendTask(){
     Serial.println("Error sending the data");//delete before prduction
   } 
 }
+
 void EspNowRegusterPeer(){
   esp_now_peer_info_t peerInfo= {};
   peerInfo.channel = 0;  
@@ -297,7 +299,6 @@ void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) {
   Serial.println(receiveData.task);
   swithTaskReturnMaster(receiveData.task);
 }
-
 void swithTaskReturnMaster( int taskReceive){//task that are send to the Router 
       StaticJsonDocument<200> doc1;
       doc1["task"]=(String)receiveData.task;
