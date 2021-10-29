@@ -2,8 +2,9 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include "config_wifi.h"
-#include "EOTAUpdate.h"
+//#include "EOTAUpdate.h"
 #include <HardwareSerial.h>
+#include <ESP32httpUpdate.h>
 
   #define EEPROM_SSID 0
   #define EEPROM_PASS 100
@@ -12,9 +13,9 @@
 //Config_OTA
 //const char * const   VERSION_STRING = "0.1";
   const unsigned short VERSION_NUMBER = 1;
-  const char * const   UPDATE_URL     = "http://morning-falls-78321.herokuapp.com/update.txt";
+//  const char * const   UPDATE_URL     = "http://morning-falls-78321.herokuapp.com/update.txt";
 //  const char * const   UPDATE_URL     = "http://0db0f6a29cd7.ngrok.io/update.txt";
-  EOTAUpdate updater(UPDATE_URL, VERSION_NUMBER);
+//  EOTAUpdate updater(UPDATE_URL, VERSION_NUMBER);
 
   //Config_wifi
   Config_wifi wifi;
@@ -27,11 +28,11 @@ int checkSendTime=15000;
 int checkSendTimeNow;
 int checkSuccess=0;
 
-int withTimeForSuccess=200;//200
+int withTimeForSuccess=1000;//200
 int withTimeForSuccessNow=0;
 
 int timeSinceRecivedMassageFromPlant=0;
-int timeSinceRecivedMassageFromPlantChect=4000;
+int timeSinceRecivedMassageFromPlantChect=5000;
 
 bool reciveMassageFromMaster=false;
 
@@ -44,7 +45,7 @@ typedef struct sentDataStruct{
   bool autoIrrigateState=false;
   int irrigatePlantOption;
   String UPDATE_URL;
-  unsigned short versuionNumber;
+  int versuionNumber;
   String ssid;
   String pass;
  } sentDataStruct; 
@@ -64,6 +65,7 @@ typedef struct receiveDataStruct{
   unsigned short VERSION_NUMBER;
   bool massgeSuccess;
   bool wifiWorked;
+  int motorStateSubtraction;
 } receiveDataStruct;
 receiveDataStruct receiveData;
 
@@ -85,9 +87,10 @@ void setup() {
    Serial2.begin(4500000);   
     
    delay(1000);
-      WiFi.mode(WIFI_STA);
+     WiFi.mode(WIFI_STA);
      Serial.println("noooooooo");
-
+     Serial.println("VERSION : ");
+     Serial.println(VERSION_NUMBER);
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
@@ -124,18 +127,19 @@ void loop() {
     }
     
 
-    if ((checkSuccess==1)&&(millis()-checkSendTimeNow<checkSendTime)&&(millis()-withTimeForSuccessNow>withTimeForSuccess)){
-       // Serial.println("time left:" +(String)(millis()-checkSendTimeNow));//delete before prduction  
-        Serial.println("Error sending the data, trying agin");//delete before prduction
-        withTimeForSuccessNow=millis();
-        sendTask();
-  }
+//    if ((checkSuccess==1)&&(millis()-checkSendTimeNow<checkSendTime)&&(millis()-withTimeForSuccessNow>withTimeForSuccess)){
+//       // Serial.println("time left:" +(String)(millis()-checkSendTimeNow));//delete before prduction  
+//        Serial.println("Error sending the data, trying agin");//delete before prduction
+//        withTimeForSuccessNow=millis();
+//        sendTask();
+//  }
 
 }
 
 void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter send to the plant
   sentData.task=local_doc["task"];  
   sentData.plantIdNumber=local_doc["productCatNumber"].as<String>();
+  if(local_doc["macAddress"])
   updateSendMACAddress(local_doc["macAddress"]) ; 
   Serial.println("task number "+(String)sentData.task);
   Serial.println("product numbeer"+sentData.plantIdNumber);
@@ -163,7 +167,8 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
     case 8:
 //      checkUpdateProgrem();
       sentData.UPDATE_URL=local_doc["UPDATE_URL"].as<String>();
-      sentData.versuionNumber=local_doc["VERSION_NUMBER"].as<unsigned short>();
+              Serial.println(sentData.UPDATE_URL);
+      sentData.versuionNumber=local_doc["VERSION_NUMBER"].as<int>();
       sentData.ssid=local_doc["ssid"].as<String>();
       sentData.pass=local_doc["pass"].as<String>();
     break;
@@ -172,17 +177,17 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
         Serial.println("Error initializing ESP-NOW");
         return;
       }
-      
        wifi.writeStringEEPROM(EEPROM_SSID,wifi.urldecode(local_doc["ssid"].as<String>()));
        wifi.writeStringEEPROM(EEPROM_PASS,wifi.urldecode(local_doc["pass"].as<String>()));
-        WiFi.mode(WIFI_STA);//WIFI_MODE_STA
-        String ssidD=wifi.urldecode(wifi.readStringEEPROM(EEPROM_SSID));
-        String passD=wifi.urldecode(wifi.readStringEEPROM(EEPROM_PASS));
+        WiFi.mode(WIFI_STA);//WIFI_MODE_STA        
+        String ssidD=wifi.urldecode(local_doc["ssid"].as<String>());
+        String passD=wifi.urldecode(local_doc["pass"].as<String>());
         char ssidA[100];
         char passA[100];
         ssidD.toCharArray(ssidA, 99);
         passD.toCharArray(passA, 99);
-        Serial.println("Trying to connect to " + ssidD + " with passwd:" + passD);  
+        
+        Serial.println("Trying to connect to " + ssidD + " with passwd:" + passD);        
         WiFi.begin(ssidA, passA); 
         delay(1000);   
         int i = 100;
@@ -201,7 +206,11 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
         else if (WiFi.status() == WL_CONNECTED)
         {
           Serial.println("WiFi connected");//delete before prduction
-          Serial.println("Checking for updates. Remember to set the URL!");//delete before prduction
+          wifi.writeStringEEPROM(EEPROM_SSID,wifi.urldecode(local_doc["ssid"].as<String>()));
+          wifi.writeStringEEPROM(EEPROM_PASS,wifi.urldecode(local_doc["pass"].as<String>()));
+          if(local_doc["UPDATE_URL"].as<int>()>VERSION_NUMBER)
+           Serial.println("Checking for updates. Remember to set the URL!");//delete before prduction
+           t_httpUpdate_return ret = ESPhttpUpdate.update(local_doc["UPDATE_URL"].as<String>());
     //      updater.CheckAndUpdate();
           delay(30);
           } 
@@ -212,7 +221,7 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
          swithTaskReturnMaster(11);
       break;
   
-      }     
+      }           
   if((sentData.task !=10)&&(sentData.task !=11)){
   checkSendTimeNow=millis();
   withTimeForSuccessNow=millis();
@@ -272,7 +281,6 @@ void sendTask(){
     Serial.println("Error sending the data");//delete before prduction
   } 
 }
-
 void EspNowRegusterPeer(){
   esp_now_peer_info_t peerInfo= {};
   peerInfo.channel = 0;  
@@ -289,14 +297,14 @@ void onReceiveData(const uint8_t * mac, const uint8_t *dataIncom, int len) {
   checkSuccess=0;
   reciveMassageFromMaster=false;
   char macStr[18];
-  Serial.print("Packet received from: ");
+  //Serial.print("Packet received from: ");
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   //Serial.println(macStr);
   memcpy(&receiveData, dataIncom, sizeof(receiveData));
  // Serial.print("Packet received size: ");
   //Serial.println(sizeof(receiveData));
-  Serial.println(receiveData.task);
+  //Serial.println(receiveData.task);
   swithTaskReturnMaster(receiveData.task);
 }
 void swithTaskReturnMaster( int taskReceive){//task that are send to the Router 
@@ -329,6 +337,9 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
         //Serial.println("autoIrrigateState state:"+ (String)receiveData.autoIrrigateState); 
         //Serial.println("waterState state:"+ (String)receiveData.waterState); 
       break;
+     case 7://reciving motor status 
+        Serial.println((String)receiveData.motorStateSubtraction);        
+      break;
     case 8://update recive and updateing or not 
      doc1["massgeSuccess"]=receiveData.massgeSuccess;
      doc1["VERSION_NUMBER"]=receiveData.VERSION_NUMBER; 
@@ -349,7 +360,7 @@ void swithTaskReturnMaster( int taskReceive){//task that are send to the Router
       doc1["massgeSuccess"]=receiveData.massgeSuccess;
      break;
 }
-    if(receiveData.task !=10){
+    if((receiveData.task !=10)&&(receiveData.task !=7)){
     serializeJson(doc1,Serial2);
     Serial.println("send tesk to master" ); 
     }
