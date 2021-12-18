@@ -43,6 +43,15 @@ typedef struct sentDataStruct{
   int motorCurrentSub;
   bool motorState=false;
   bool autoIrrigateState=false;
+  int timeDelayWaterPumpHigh;
+  int timeDelayWaterPumpMid;
+  int timeDelayWaterPumpLow;
+  int timedelay_hum;
+  int waterPumpOnTimeHigh;
+  int waterPumpOnTimeMid;
+  int waterPumpOnTimeLow;
+  int humLowLevel;
+  int humHighLevel;
   int irrigatePlantOption;
   String UPDATE_URL;
   int versuionNumber;
@@ -155,6 +164,15 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
       break;
     case 4:
         sentData.autoIrrigateState = local_doc["autoIrrigateState"];
+        sentData.timeDelayWaterPumpHigh= local_doc["timeDelayWaterPumpHigh"];
+        sentData.timeDelayWaterPumpMid= local_doc["timeDelayWaterPumpMid"];
+        sentData.timeDelayWaterPumpLow= local_doc["timeDelayWaterPumpLow"];
+        sentData.timedelay_hum= local_doc["timedelay_hum"];
+        sentData.waterPumpOnTimeHigh= local_doc["waterPumpOnTimeHigh"];
+        sentData.waterPumpOnTimeMid= local_doc["waterPumpOnTimeMid"];
+        sentData.waterPumpOnTimeLow= local_doc["waterPumpOnTimeLow"];
+        sentData.humLowLevel= local_doc["humLowLevel"];
+        sentData.humHighLevel= local_doc["humHighLevel"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
       break;
     case 5:
