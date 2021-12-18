@@ -118,7 +118,7 @@ void loop() {
    //  Serial.println(" i have a massage" ); 
     }
   if(messageReady){
-    DynamicJsonDocument doc(1024);  
+    DynamicJsonDocument doc(2048);  
     // Attempt to deserialize the JSON-formatted message
     DeserializationError error = deserializeJson(doc,message);
     if(error) {
@@ -164,15 +164,15 @@ void swithSendTaskPlant(const JsonDocument& local_doc){//task racive from Ruter 
       break;
     case 4:
         sentData.autoIrrigateState = local_doc["autoIrrigateState"];
-        sentData.timeDelayWaterPumpHigh= local_doc["timeDelayWaterPumpHigh"];
-        sentData.timeDelayWaterPumpMid= local_doc["timeDelayWaterPumpMid"];
-        sentData.timeDelayWaterPumpLow= local_doc["timeDelayWaterPumpLow"];
+        sentData.timeDelayWaterPumpHigh= local_doc["tDWPH"];
+        sentData.timeDelayWaterPumpMid= local_doc["tDWPM"];
+        sentData.timeDelayWaterPumpLow= local_doc["tDWPL"];
         sentData.timedelay_hum= local_doc["timedelay_hum"];
-        sentData.waterPumpOnTimeHigh= local_doc["waterPumpOnTimeHigh"];
-        sentData.waterPumpOnTimeMid= local_doc["waterPumpOnTimeMid"];
-        sentData.waterPumpOnTimeLow= local_doc["waterPumpOnTimeLow"];
-        sentData.humLowLevel= local_doc["humLowLevel"];
-        sentData.humHighLevel= local_doc["humHighLevel"];
+        sentData.waterPumpOnTimeHigh= local_doc["wPOTH"];
+        sentData.waterPumpOnTimeMid= local_doc["wPOTM"];
+        sentData.waterPumpOnTimeLow= local_doc["wPOTL"];
+        sentData.humLowLevel= local_doc["hLL"];
+        sentData.humHighLevel= local_doc["hHL"];
         sentData.motorCurrentSub=local_doc["motorCurrentSub"];
       break;
     case 5:
